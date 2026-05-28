@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -7,389 +6,601 @@
 <title>SERVICE SHEET - KIMAC</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { width: 100%; overflow-x: hidden; }
-  body {
-    font-family: 'Sarabun', sans-serif;
-    background: #f0f0f0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px;
-    font-size: 13px;
-  }
-  .btn-export {
-    margin-bottom: 15px;
-    padding: 10px 28px;
-    background: #1a3a6e;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-family: 'Sarabun', sans-serif;
-    font-size: 15px;
-    cursor: pointer;
-    font-weight: 600;
-  }
-  .btn-export:hover { background: #122d57; }
-  @media print {
-    body { background: white; padding: 0; }
-    .btn-export { display: none; }
-    .page { box-shadow: none; margin: 0; }
-    .sig-trigger-btn { display: none !important; }
-    .sig-preview-img { display: block !important; }
-    .btn-add-row { display: none !important; }
-    .btn-clear-sig { display: none !important; }
-  }
-  /* PAGE = A4 fixed size — this is the canvas that gets exported.
-     On mobile we visually scale it down but keep its internal size so the
-     PDF output stays identical regardless of viewing device. */
-  .page-wrapper {
-    width: 210mm;
-    transform-origin: top center;
-  }
-  .page {
-    width: 210mm;
-    min-height: 297mm;
-    background: #ffffff;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    padding: 5mm 8mm 4mm 8mm;
-    position: relative;
-    overflow: hidden;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 3px solid #1a3a6e;
-    padding-bottom: 3px;
-    margin-bottom: 4px;
-  }
-  .header-logo-wrap { display: flex; flex-direction: column; align-items: center; }
-  .header-logo { width: 110px; height: 80px; object-fit: contain; }
-  .header-center { text-align: center; flex: 1; }
-  .header-center h1 { font-size: 22px; font-weight: 700; color: #1a3a6e; letter-spacing: 2px; }
-  .header-center p { font-size: 12px; color: #555; }
-  .header-spacer { width: 110px; }
-  .service-type-bar { background: #fff9c4; border: 1px solid #f9c900; border-radius: 4px; padding: 4px 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .service-type-bar span { font-weight: 600; color: #1a3a6e; white-space: nowrap; }
-  .service-type-bar select { border: 1px solid #bfa000; border-radius: 4px; background: white; font-family: 'Sarabun', sans-serif; font-size: 13px; padding: 2px 8px; outline: none; cursor: pointer; color: #222; }
-  .other-input { border: none; border-bottom: 1px solid #aaa; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 13px; width: 200px; outline: none; display: none; }
-  .other-input.show { display: inline-block; }
-  .section-title { background: #1a3a6e; color: white; padding: 3px 8px; font-weight: 700; font-size: 12px; border-radius: 3px; margin-bottom: 4px; margin-top: 5px; }
-  .form-row { display: flex; gap: 6px; margin-bottom: 4px; align-items: center; flex-wrap: wrap; }
-  .field { display: flex; align-items: center; gap: 4px; flex: 1; }
-  .field label { white-space: nowrap; color: #444; font-weight: 600; font-size: 12px; }
-  .field input, .field select, .field textarea { flex: 1; border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 13px; padding: 1px 4px; outline: none; color: #222; min-width: 60px; }
-  .field select { border: 1px solid #bfa000; border-radius: 4px; background: white; padding: 2px 4px; cursor: pointer; }
-  .field textarea { resize: none; border: 1px solid #bfa000; border-radius: 4px; background: rgba(255,255,255,0.7); padding: 4px; width: 100%; font-size: 13px; line-height: 1.6; }
-  .full-width { width: 100%; flex: unset; }
-  .status-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 4px; }
-  .status-block { display: flex; align-items: center; gap: 8px; background: #fff9c4; border: 1px solid #f9c900; border-radius: 4px; padding: 3px 8px; flex-wrap: wrap; }
-  .status-block label { font-weight: 600; color: #1a3a6e; font-size: 12px; white-space: nowrap; }
-  .radio-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .radio-group label { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; font-weight: 400; color: #333; }
-  .radio-group input[type=radio] { width: 14px; height: 14px; accent-color: #1a3a6e; cursor: pointer; }
-  .warranty-input { border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 13px; width: 160px; outline: none; display: none; }
-  .warranty-input.show { display: inline-block; }
-  .parts-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 12px; }
-  .parts-table th { background: #1a3a6e; color: white; padding: 4px; text-align: center; font-size: 11px; font-weight: 600; }
-  .parts-table td { border: 1px solid #d4c000; padding: 2px 4px; background: white; }
-  .parts-table td input { width: 100%; border: none; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 11px; outline: none; text-align: center; }
-  .parts-table td:first-child { text-align: center; width: 24px; background: #fff9c4; font-weight: 600; color: #1a3a6e; }
-  .parts-table td:nth-child(2) input { text-align: center; }
-  .parts-table .price-cell input { text-align: right; }
-  .parts-table .total-label { text-align: right; font-weight: 700; background: #fff9c4; color: #1a3a6e; padding-right: 8px; border: 1px solid #d4c000; }
-  .parts-table .total-val { text-align: right; background: #fffde0; font-weight: 700; color: #c00; border: 1px solid #d4c000; padding-right: 6px; min-width: 80px; }
-  .province-input { border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 12px; width: 110px; outline: none; display: none; color: #222; }
-  .province-input.show { display: inline-block; }
-  .sig-section { clear: both; display: flex; gap: 10px; margin-top: 6px; margin-bottom: 6px; }
-  .sig-box { flex: 1; border: 1.5px solid #1a3a6e; border-radius: 6px; padding: 6px 10px 8px; background: white; text-align: center; }
-  .sig-box .sig-title { font-size: 13px; font-weight: 700; color: #1a3a6e; margin-bottom: 6px; }
-  .sig-preview-wrap {
-    position: relative;
-    width: 100%;
-    height: 110px;
-    border: 1px dashed #bfa000;
-    border-radius: 4px;
-    background: #f8f8f8;
-    overflow: hidden;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .sig-preview-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: none;
-    position: absolute;
-    top: 0; left: 0;
-  }
-  .sig-trigger-btn {
-    font-size: 12px;
-    color: #555;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-family: 'Sarabun', sans-serif;
-    padding: 4px 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    z-index: 1;
-  }
-  /* Clear button — hidden by default. Only appears when a signature exists. */
-  .btn-clear-sig {
-    font-size: 11px;
-    padding: 3px 10px;
-    border: 1px solid #c00;
-    border-radius: 3px;
-    background: #fff;
-    color: #c00;
-    cursor: pointer;
-    font-family: 'Sarabun', sans-serif;
-    margin-top: 4px;
-    font-weight: 600;
-    display: none;
-  }
-  .btn-clear-sig.show { display: inline-block; }
-  .sig-clear-wrap { text-align: right; min-height: 22px; }
-  .sig-meta { display: flex; gap: 6px; margin-top: 4px; font-size: 11px; align-items: center; flex-wrap: wrap; }
-  .sig-meta label { color: #555; font-size: 11px; white-space: nowrap; }
-  .sig-meta input { border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 11px; flex: 1; outline: none; min-width: 50px; }
-  .sig-modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 9999;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .sig-modal-overlay.open { display: flex; }
-  .sig-modal-header {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    background: #1a3a6e;
-    color: white;
-  }
-  .sig-modal-title { font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; color: white; }
-  .sig-modal-body {
-    flex: 1;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    background: white;
-  }
-  .sig-modal-hint { font-family: 'Sarabun', sans-serif; font-size: 13px; color: #888; margin-bottom: 10px; }
-  .sig-modal-canvas-wrap {
-    width: 100%;
-    max-width: 560px;
-    border: 2px dashed #bfa000;
-    border-radius: 8px;
-    background: #fafafa;
-    overflow: hidden;
-  }
-  #sigModalCanvas { display: block; width: 100%; touch-action: none; cursor: crosshair; background: #fafafa; }
-  .sig-modal-footer {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .sig-modal-btn { padding: 10px 28px; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; }
-  .sig-modal-btn.confirm { background: #1a3a6e; color: white; }
-  .sig-modal-btn.clear { background: #eee; color: #333; border: 1px solid #bbb; }
-  .sig-modal-btn.cancel { background: #c00; color: white; }
-  .footer { text-align: center; border-top: 2px solid #1a3a6e; padding-top: 4px; margin-top: 6px; color: #1a3a6e; font-size: 11px; line-height: 1.5; }
-  .footer .company-name { font-size: 13px; font-weight: 700; color: #1a3a6e; }
-  .footer .contact { color: #444; font-size: 11px; }
-  .btn-add-row {
-    display: inline-block;
-    margin-bottom: 4px;
-    padding: 4px 14px;
-    background: #1a3a6e;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-family: 'Sarabun', sans-serif;
-    font-size: 11px;
-    cursor: pointer;
-    font-weight: 600;
-  }
-  .btn-add-row:hover { background: #122d57; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    font-size: 13px;
+  }
+  .btn-export {
+    margin-bottom: 15px;
+    padding: 10px 28px;
+    background: #1a3a6e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-export:hover { background: #122d57; }
+
+  /* ===== SCREEN styles ===== */
+  .page-wrapper {
+    width: 210mm;
+    transform-origin: top center;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    padding: 5mm 8mm 4mm 8mm;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  /* push footer to bottom */
+  .page-body { flex: 1; }
+
+  /* ===== PRINT styles ===== */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  @media print {
+    html, body {
+      width: 210mm;
+      height: 297mm;
+      background: white;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      display: block;
+    }
+    .btn-export { display: none !important; }
+    .page-wrapper {
+      width: 210mm !important;
+      transform: none !important;
+      display: block;
+    }
+    .page {
+      width: 210mm !important;
+      min-height: 297mm;
+      height: 297mm;
+      box-shadow: none;
+      margin: 0;
+      padding: 5mm 8mm 4mm 8mm;
+      display: flex;
+      flex-direction: column;
+      page-break-after: avoid;
+    }
+    .page-body { flex: 1; }
+    .footer {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    .sig-trigger-btn { display: none !important; }
+    .sig-preview-img { display: block !important; }
+    .btn-add-row { display: none !important; }
+    .btn-clear-sig { display: none !important; }
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #1a3a6e;
+    padding-bottom: 3px;
+    margin-bottom: 4px;
+  }
+  .header-logo-wrap { display: flex; flex-direction: column; align-items: center; }
+  .header-logo { width: 110px; height: 80px; object-fit: contain; }
+  .header-center { text-align: center; flex: 1; }
+  .header-center h1 { font-size: 22px; font-weight: 700; color: #1a3a6e; letter-spacing: 2px; }
+  .header-center p { font-size: 12px; color: #555; }
+  .header-spacer { width: 110px; }
+  .service-type-bar { background: #fff9c4; border: 1px solid #f9c900; border-radius: 4px; padding: 4px 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .service-type-bar span { font-weight: 600; color: #1a3a6e; white-space: nowrap; }
+  .service-type-bar select { border: 1px solid #bfa000; border-radius: 4px; background: white; font-family: 'Sarabun', sans-serif; font-size: 13px; padding: 2px 8px; outline: none; cursor: pointer; color: #222; }
+  .other-input { border: none; border-bottom: 1px solid #aaa; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 13px; width: 200px; outline: none; display: none; }
+  .other-input.show { display: inline-block; }
+  .section-title { background: #1a3a6e; color: white; padding: 3px 8px; font-weight: 700; font-size: 12px; border-radius: 3px; margin-bottom: 4px; margin-top: 5px; }
+  .form-row { display: flex; gap: 6px; margin-bottom: 4px; align-items: center; flex-wrap: wrap; }
+  .field { display: flex; align-items: center; gap: 4px; flex: 1; }
+  .field label { white-space: nowrap; color: #444; font-weight: 600; font-size: 12px; }
+  .field input, .field select, .field textarea { flex: 1; border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 13px; padding: 1px 4px; outline: none; color: #222; min-width: 60px; }
+  .field select { border: 1px solid #bfa000; border-radius: 4px; background: white; padding: 2px 4px; cursor: pointer; }
+  .field textarea { resize: none; border: 1px solid #bfa000; border-radius: 4px; background: rgba(255,255,255,0.7); padding: 4px; width: 100%; font-size: 13px; line-height: 1.6; }
+  .full-width { width: 100%; flex: unset; }
+  .status-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 4px; }
+  .status-block { display: flex; align-items: center; gap: 8px; background: #fff9c4; border: 1px solid #f9c900; border-radius: 4px; padding: 3px 8px; flex-wrap: wrap; }
+  .status-block label { font-weight: 600; color: #1a3a6e; font-size: 12px; white-space: nowrap; }
+  .radio-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .radio-group label { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; font-weight: 400; color: #333; }
+  .radio-group input[type=radio] { width: 14px; height: 14px; accent-color: #1a3a6e; cursor: pointer; }
+  .warranty-input { border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 13px; width: 160px; outline: none; display: none; }
+  .warranty-input.show { display: inline-block; }
+  .parts-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 12px; }
+  .parts-table th { background: #1a3a6e; color: white; padding: 4px; text-align: center; font-size: 11px; font-weight: 600; }
+  .parts-table td { border: 1px solid #d4c000; padding: 2px 4px; background: white; }
+  .parts-table td input { width: 100%; border: none; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 11px; outline: none; text-align: center; }
+  .parts-table td:first-child { text-align: center; width: 24px; background: #fff9c4; font-weight: 600; color: #1a3a6e; }
+  .parts-table td:nth-child(2) input { text-align: center; }
+  .parts-table .price-cell input { text-align: right; }
+  .parts-table .total-label { text-align: right; font-weight: 700; background: #fff9c4; color: #1a3a6e; padding-right: 8px; border: 1px solid #d4c000; }
+  .parts-table .total-val { text-align: right; background: #fffde0; font-weight: 700; color: #c00; border: 1px solid #d4c000; padding-right: 6px; min-width: 80px; }
+  .province-input { border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 12px; width: 110px; outline: none; display: none; color: #222; }
+  .province-input.show { display: inline-block; }
+  .sig-section { clear: both; display: flex; gap: 10px; margin-top: 6px; margin-bottom: 6px; }
+  .sig-box { flex: 1; border: 1.5px solid #1a3a6e; border-radius: 6px; padding: 6px 10px 8px; background: white; text-align: center; }
+  .sig-box .sig-title { font-size: 13px; font-weight: 700; color: #1a3a6e; margin-bottom: 6px; }
+  .sig-preview-wrap {
+    position: relative;
+    width: 100%;
+    height: 110px;
+    border: 1px dashed #bfa000;
+    border-radius: 4px;
+    background: #f8f8f8;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sig-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: none;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  .sig-trigger-btn {
+    font-size: 12px;
+    color: #555;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 1;
+  }
+  .btn-clear-sig {
+    font-size: 11px;
+    padding: 3px 10px;
+    border: 1px solid #c00;
+    border-radius: 3px;
+    background: #fff;
+    color: #c00;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    margin-top: 4px;
+    font-weight: 600;
+    display: none;
+  }
+  .btn-clear-sig.show { display: inline-block; }
+  .sig-clear-wrap { text-align: right; min-height: 22px; }
+  .sig-meta { display: flex; gap: 6px; margin-top: 4px; font-size: 11px; align-items: center; flex-wrap: wrap; }
+  .sig-meta label { color: #555; font-size: 11px; white-space: nowrap; }
+  .sig-meta input { border: none; border-bottom: 1px solid #bfa000; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 11px; flex: 1; outline: none; min-width: 50px; }
+  .sig-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .sig-modal-overlay.open { display: flex; }
+  .sig-modal-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #1a3a6e;
+    color: white;
+  }
+  .sig-modal-title { font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; color: white; }
+  .sig-modal-body {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: white;
+  }
+  .sig-modal-hint { font-family: 'Sarabun', sans-serif; font-size: 13px; color: #888; margin-bottom: 10px; }
+  .sig-modal-canvas-wrap {
+    width: 100%;
+    max-width: 560px;
+    border: 2px dashed #bfa000;
+    border-radius: 8px;
+    background: #fafafa;
+    overflow: hidden;
+  }
+  #sigModalCanvas { display: block; width: 100%; touch-action: none; cursor: crosshair; background: #fafafa; }
+  .sig-modal-footer {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .sig-modal-btn { padding: 10px 28px; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; }
+  .sig-modal-btn.confirm { background: #1a3a6e; color: white; }
+  .sig-modal-btn.clear { background: #eee; color: #333; border: 1px solid #bbb; }
+  .sig-modal-btn.cancel { background: #c00; color: white; }
+  .footer {
+    text-align: center;
+    border-top: 2px solid #1a3a6e;
+    padding-top: 4px;
+    margin-top: auto;
+    color: #1a3a6e;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .footer .company-name { font-size: 13px; font-weight: 700; color: #1a3a6e; }
+  .footer .contact { color: #444; font-size: 11px; }
+  .btn-add-row {
+    display: inline-block;
+    margin-bottom: 4px;
+    padding: 4px 14px;
+    background: #1a3a6e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-add-row:hover { background: #122d57; }
 </style>
 </head>
 <body>
 <button class="btn-export" onclick="exportPDF()">&#11015; Export PDF / ดาวน์โหลด PDF</button>
 <div class="page-wrapper" id="pageWrapper">
 <div class="page" id="page">
-  <div class="header">
-    <div class="header-logo-wrap">
-      <img class="header-logo" id="kimacLogo" src="" alt="KIMAC Logo">
-    </div>
-    <div class="header-center">
-      <h1>SERVICE SHEET</h1>
-      <p>ใบบันทึกงานบริการ</p>
-    </div>
-    <div class="header-spacer"></div>
-  </div>
-  <div class="service-type-bar">
-    <span>งานบริการ :</span>
-    <select id="serviceTypeSelect" onchange="toggleOtherService(this)">
-      <option value="">-- เลือกประเภทงาน --</option>
-      <option value="install">ติดตั้งเครื่องจักร</option>
-      <option value="repair">ซ่อมบำรุง</option>
-      <option value="other">อื่นๆ</option>
-    </select>
-    <input class="other-input" id="otherServiceInput" type="text" placeholder="ระบุประเภทงาน...">
-  </div>
-  <div class="section-title">ส่วนที่ 1 ข้อมูลลูกค้า</div>
-  <div class="form-row">
-    <div class="field"><label>วันที่บริการ :</label><input type="date"></div>
-    <div class="field"><label>เวลาเริ่ม :</label><input type="time"></div>
-    <div class="field"><label>เวลาจบงาน :</label><input type="time"></div>
-  </div>
-  <div class="form-row">
-    <div class="field full-width"><label>บริษัท / ห้างฯ / ร้าน ลูกค้า :</label><input type="text" style="min-width:300px;"></div>
-  </div>
-  <div class="form-row">
-    <div class="field"><label>ติดต่อคุณ :</label><input type="text"></div>
-    <div class="field"><label>ตำแหน่ง :</label><input type="text"></div>
-    <div class="field"><label>เบอร์โทร :</label><input type="tel"></div>
-  </div>
-  <div class="form-row">
-    <div class="field full-width"><label>ที่อยู่ :</label><input type="text" style="min-width:350px;"></div>
-  </div>
-  <div class="section-title">ส่วนที่ 2 ข้อมูลเครื่องจักร</div>
-  <div class="status-row">
-    <div class="status-block">
-      <label>สถานที่บริการ :</label>
-      <select style="border:1px solid #bfa000;border-radius:4px;background:white;font-family:'Sarabun',sans-serif;font-size:13px;padding:2px 6px;outline:none;cursor:pointer;color:#222;">
-        <option value="">-- เลือก --</option>
-        <option>ที่ลูกค้า</option>
-        <option>บจก.คีแมค</option>
-        <option>อื่นๆ</option>
-      </select>
-    </div>
-    <div class="status-block">
-      <label>สถานะ :</label>
-      <div class="radio-group">
-        <label><input type="radio" name="warranty" value="in" onchange="toggleWarranty(this)"> ในรับประกัน</label>
-        <label><input type="radio" name="warranty" value="out" onchange="toggleWarranty(this)"> นอกรับประกัน</label>
-      </div>
-      <span id="warrantyLabel" style="font-size:12px;color:#555;margin-left:4px;display:none;">เลขที่ :</span>
-      <input type="text" id="warrantyNo" class="warranty-input" placeholder="กรอกเลขประกัน...">
-    </div>
-  </div>
-  <div class="form-row" style="margin-top:4px;">
-    <div class="field"><label>เครื่อง :</label><input type="text"></div>
-    <div class="field"><label>รุ่น :</label><input type="text"></div>
-    <div class="field"><label>S/N :</label><input type="text"></div>
-    <div class="field"><label>วันที่ซื้อ :</label><input type="date"></div>
-  </div>
-  <div class="form-row">
-    <div class="field full-width" style="flex-direction:column;align-items:flex-start;gap:3px;">
-      <label>รายละเอียด :</label>
-      <textarea rows="2" style="width:100%;"></textarea>
-    </div>
-  </div>
-  <div class="section-title">ส่วนที่ 3 รายการอะไหล่ที่เปลี่ยน</div>
-  <table class="parts-table">
-    <thead>
-      <tr>
-        <th style="text-align:center;">ลำดับ</th>
-        <th style="text-align:center;width:32%">รายการอะไหล่</th>
-        <th style="width:12%">รหัส</th>
-        <th style="width:7%">จำนวน</th>
-        <th style="width:8%">หน่วย</th>
-        <th style="width:26%">ราคา</th>
-      </tr>
-    </thead>
-    <tbody id="partsBody"></tbody>
-    <tfoot>
-      <tr>
-        <td colspan="5" class="total-label">รวมยอด</td>
-        <td class="total-val"><input type="text" id="s_sub" readonly placeholder="0.00"></td>
-      </tr>
-      <tr>
-        <td colspan="5" class="total-label">VAT 7%</td>
-        <td class="total-val"><input type="text" id="s_vat" readonly placeholder="0.00"></td>
-      </tr>
-      <tr>
-        <td colspan="5" style="text-align:right;font-weight:700;color:#1a3a6e;font-size:13px;padding:4px 8px;border:1px solid #d4c000;background:#f0f4ff;">รวมยอดสุทธิ</td>
-        <td style="text-align:right;background:#f0f4ff;border:1px solid #d4c000;padding-right:6px;"><input type="text" id="s_total" readonly placeholder="0.00" style="width:100%;border:none;background:transparent;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;color:#1a3a6e;text-align:right;outline:none;"></td>
-      </tr>
-    </tfoot>
-  </table>
-  <button class="btn-add-row" onclick="addRow()">+ เพิ่มแถว</button>
-  <div class="section-title">ส่วนที่ 4 ประเภทค่าบริการ</div>
-  <div style="background:#f8f8f8;border:1px solid #d4c000;border-radius:0 0 4px 4px;padding:4px 8px;margin-bottom:4px;">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;white-space:nowrap;"><input type="radio" name="feeType" value="free" onchange="toggleFee(this)" style="accent-color:#1a3a6e;"> ฟรี</label>
-      <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;white-space:nowrap;"><input type="radio" name="feeType" value="bkk" onchange="toggleFee(this)" style="accent-color:#1a3a6e;"> กรุงเทพฯ/ปริมณฑล</label>
-      <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;white-space:nowrap;"><input type="radio" name="feeType" value="province" onchange="toggleFee(this)" style="accent-color:#1a3a6e;"> ต่างจังหวัด <input type="text" id="provinceInput" class="province-input" placeholder="ระบุจังหวัด..."></label>
-    </div>
-  </div>
-  <div class="section-title" style="clear:both;">ส่วนที่ 5 ลูกค้า / ผู้ให้บริการ</div>
-  <div class="sig-section">
-    <div class="sig-box">
-      <div class="sig-title">ลายเซ็นช่างผู้ให้บริการ</div>
-      <div class="sig-preview-wrap" id="techSigWrap" onclick="openSigModal('tech')">
-        <img class="sig-preview-img" id="techSigImg" src="" alt="signature">
-        <button class="sig-trigger-btn" id="techSigBtn" type="button">&#9999; แตะเพื่อเซ็นชื่อ</button>
-      </div>
-      <div class="sig-clear-wrap"><button class="btn-clear-sig" id="techClearBtn" onclick="clearSigPreview('tech')">ลบลายเซ็น</button></div>
-      <div class="sig-meta">
-        <label>ชื่อช่าง :</label><input type="text" id="techName">
-        <label>วันที่ :</label><input type="date" id="techDate">
-      </div>
-    </div>
-    <div class="sig-box">
-      <div class="sig-title">ลายเซ็นลูกค้า / ผู้ตรวจรับงาน</div>
-      <div class="sig-preview-wrap" id="custSigWrap" onclick="openSigModal('cust')">
-        <img class="sig-preview-img" id="custSigImg" src="" alt="signature">
-        <button class="sig-trigger-btn" id="custSigBtn" type="button">&#9999; แตะเพื่อเซ็นชื่อ</button>
-      </div>
-      <div class="sig-clear-wrap"><button class="btn-clear-sig" id="custClearBtn" onclick="clearSigPreview('cust')">ลบลายเซ็น</button></div>
-      <div class="sig-meta">
-        <label>ชื่อ :</label><input type="text" id="custName">
-        <label>แผนก :</label><input type="text" id="custDept">
-        <label>วันที่ :</label><input type="date" id="custDate">
-      </div>
-    </div>
-  </div>
-  <div class="footer">
-    <div class="company-name">บริษัท คีแมค จำกัด</div>
-    <div class="contact">298 ถนนสามวา แขวงบางชัน เขตคลองสามวา กรุงเทพมหานคร 10510</div>
-    <div class="contact">Tel. (+66)2-956-8291-2 &nbsp; Line : @kimac &nbsp; www.kimacthailand.com</div>
-  </div>
+  <div class="page-body">
+  <div class="header">
+    <div class="header-logo-wrap">
+      <img class="header-logo" id="kimacLogo" src="" alt="KIMAC Logo">
+    </div>
+    <div class="header-center">
+      <h1>SERVICE SHEET</h1>
+      <p>ใบบันทึกงานบริการ</p>
+    </div>
+    <div class="header-spacer"></div>
+  </div>
+  <div class="service-type-bar">
+    <span>งานบริการ :</span>
+    <select id="serviceTypeSelect" onchange="toggleOtherService(this)">
+      <option value="">-- เลือกประเภทงาน --</option>
+      <option value="install">ติดตั้งเครื่องจักร</option>
+      <option value="repair">ซ่อมบำรุง</option>
+      <option value="other">อื่นๆ</option>
+    </select>
+    <input class="other-input" id="otherServiceInput" type="text" placeholder="ระบุประเภทงาน...">
+  </div>
+  <div class="section-title">ส่วนที่ 1 ข้อมูลลูกค้า</div>
+  <div class="form-row">
+    <div class="field"><label>วันที่บริการ :</label><input type="date"></div>
+    <div class="field"><label>เวลาเริ่ม :</label><input type="time"></div>
+    <div class="field"><label>เวลาจบงาน :</label><input type="time"></div>
+  </div>
+  <div class="form-row">
+    <div class="field full-width"><label>บริษัท / ห้างฯ / ร้าน ลูกค้า :</label><input type="text" style="min-width:300px;"></div>
+  </div>
+  <div class="form-row">
+    <div class="field"><label>ติดต่อคุณ :</label><input type="text"></div>
+    <div class="field"><label>ตำแหน่ง :</label><input type="text"></div>
+    <div class="field"><label>เบอร์โทร :</label><input type="tel"></div>
+  </div>
+  <div class="form-row">
+    <div class="field full-width"><label>ที่อยู่ :</label><input type="text" style="min-width:350px;"></div>
+  </div>
+  <div class="section-title">ส่วนที่ 2 ข้อมูลเครื่องจักร</div>
+  <div class="status-row">
+    <div class="status-block">
+      <label>สถานที่บริการ :</label>
+      <select style="border:1px solid #bfa000;border-radius:4px;background:white;font-family:'Sarabun',sans-serif;font-size:13px;padding:2px 6px;outline:none;cursor:pointer;color:#222;">
+        <option value="">-- เลือก --</option>
+        <option>ที่ลูกค้า</option>
+        <option>บจก.คีแมค</option>
+        <option>อื่นๆ</option>
+      </select>
+    </div>
+    <div class="status-block">
+      <label>สถานะ :</label>
+      <div class="radio-group">
+        <label><input type="radio" name="warranty" value="in" onchange="toggleWarranty(this)"> ในรับประกัน</label>
+        <label><input type="radio" name="warranty" value="out" onchange="toggleWarranty(this)"> นอกรับประกัน</label>
+      </div>
+      <span id="warrantyLabel" style="font-size:12px;color:#555;margin-left:4px;display:none;">เลขที่ :</span>
+      <input type="text" id="warrantyNo" class="warranty-input" placeholder="กรอกเลขประกัน...">
+    </div>
+  </div>
+  <div class="form-row" style="margin-top:4px;">
+    <div class="field"><label>เครื่อง :</label><input type="text"></div>
+    <div class="field"><label>รุ่น :</label><input type="text"></div>
+    <div class="field"><label>S/N :</label><input type="text"></div>
+    <div class="field"><label>วันที่ซื้อ :</label><input type="date"></div>
+  </div>
+  <div class="form-row">
+    <div class="field full-width" style="flex-direction:column;align-items:flex-start;gap:3px;">
+      <label>รายละเอียด :</label>
+      <textarea rows="2" style="width:100%;"></textarea>
+    </div>
+  </div>
+  <div class="section-title">ส่วนที่ 3 รายการอะไหล่ที่เปลี่ยน</div>
+  <table class="parts-table">
+    <thead>
+      <tr>
+        <th style="text-align:center;">ลำดับ</th>
+        <th style="text-align:center;width:32%">รายการอะไหล่</th>
+        <th style="width:12%">รหัส</th>
+        <th style="width:7%">จำนวน</th>
+        <th style="width:8%">หน่วย</th>
+        <th style="width:26%">ราคา</th>
+      </tr>
+    </thead>
+    <tbody id="partsBody"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5" class="total-label">รวมยอด</td>
+        <td class="total-val"><input type="text" id="s_sub" readonly placeholder="0.00"></td>
+      </tr>
+      <tr>
+        <td colspan="5" class="total-label">VAT 7%</td>
+        <td class="total-val"><input type="text" id="s_vat" readonly placeholder="0.00"></td>
+      </tr>
+      <tr>
+        <td colspan="5" style="text-align:right;font-weight:700;color:#1a3a6e;font-size:13px;padding:4px 8px;border:1px solid #d4c000;background:#f0f4ff;">รวมยอดสุทธิ</td>
+        <td style="text-align:right;background:#f0f4ff;border:1px solid #d4c000;padding-right:6px;"><input type="text" id="s_total" readonly placeholder="0.00" style="width:100%;border:none;background:transparent;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;color:#1a3a6e;text-align:right;outline:none;"></td>
+      </tr>
+    </tfoot>
+  </table>
+  <button class="btn-add-row" onclick="addRow()">+ เพิ่มแถว</button>
+  <div class="section-title">ส่วนที่ 4 ประเภทค่าบริการ</div>
+  <div style="background:#f8f8f8;border:1px solid #d4c000;border-radius:0 0 4px 4px;padding:4px 8px;margin-bottom:4px;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;white-space:nowrap;"><input type="radio" name="feeType" value="free" onchange="toggleFee(this)" style="accent-color:#1a3a6e;"> ฟรี</label>
+      <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;white-space:nowrap;"><input type="radio" name="feeType" value="bkk" onchange="toggleFee(this)" style="accent-color:#1a3a6e;"> กรุงเทพฯ/ปริมณฑล</label>
+      <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;white-space:nowrap;"><input type="radio" name="feeType" value="province" onchange="toggleFee(this)" style="accent-color:#1a3a6e;"> ต่างจังหวัด <input type="text" id="provinceInput" class="province-input" placeholder="ระบุจังหวัด..."></label>
+    </div>
+  </div>
+  <div class="section-title" style="clear:both;">ส่วนที่ 5 ลูกค้า / ผู้ให้บริการ</div>
+  <div class="sig-section">
+    <div class="sig-box">
+      <div class="sig-title">ลายเซ็นช่างผู้ให้บริการ</div>
+      <div class="sig-preview-wrap" id="techSigWrap" onclick="openSigModal('tech')">
+        <img class="sig-preview-img" id="techSigImg" src="" alt="signature">
+        <button class="sig-trigger-btn" id="techSigBtn" type="button">&#9999; แตะเพื่อเซ็นชื่อ</button>
+      </div>
+      <div class="sig-clear-wrap"><button class="btn-clear-sig" id="techClearBtn" onclick="clearSigPreview('tech')">ลบลายเซ็น</button></div>
+      <div class="sig-meta">
+        <label>ชื่อช่าง :</label><input type="text" id="techName">
+        <label>วันที่ :</label><input type="date" id="techDate">
+      </div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-title">ลายเซ็นลูกค้า / ผู้ตรวจรับงาน</div>
+      <div class="sig-preview-wrap" id="custSigWrap" onclick="openSigModal('cust')">
+        <img class="sig-preview-img" id="custSigImg" src="" alt="signature">
+        <button class="sig-trigger-btn" id="custSigBtn" type="button">&#9999; แตะเพื่อเซ็นชื่อ</button>
+      </div>
+      <div class="sig-clear-wrap"><button class="btn-clear-sig" id="custClearBtn" onclick="clearSigPreview('cust')">ลบลายเซ็น</button></div>
+      <div class="sig-meta">
+        <label>ชื่อ :</label><input type="text" id="custName">
+        <label>แผนก :</label><input type="text" id="custDept">
+        <label>วันที่ :</label><input type="date" id="custDate">
+      </div>
+    </div>
+  </div>
+  </div><!-- end page-body -->
+  <div class="footer">
+    <div class="company-name">บริษัท คีแมค จำกัด</div>
+    <div class="contact">298 ถนนสามวา แขวงบางชัน เขตคลองสามวา กรุงเทพมหานคร 10510</div>
+    <div class="contact">Tel. (+66)2-956-8291-2 &nbsp; Line : @kimac &nbsp; www.kimacthailand.com</div>
+  </div>
 </div>
 </div>
 <!-- FULLSCREEN SIGNATURE MODAL -->
 <div class="sig-modal-overlay" id="sigModalOverlay">
-  <div class="sig-modal-header">
-    <span class="sig-modal-title" id="sigModalTitle">เซ็นชื่อ</span>
-    <button class="sig-modal-btn cancel" style="padding:6px 14px;font-size:13px;" onclick="closeSigModal()">&#10005; ปิด</button>
-  </div>
-  <div class="sig-modal-body">
-    <div class="sig-modal-hint">วาดลายเซ็นของท่านในพื้นที่ด้านล่าง</div>
-    <div class="sig-modal-canvas-wrap" id="sigModalCanvasWrap">
-      <canvas id="sigModalCanvas"></canvas>
-    </div>
-    <div class="sig-modal-footer">
-      <button class="sig-modal-btn clear" onclick="clearModalCanvas()">&#128465; ล้างลายเซ็น</button>
-      <button class="sig-modal-btn confirm" onclick="confirmSig()">&#10004; ยืนยันลายเซ็น</button>
-    </div>
-  </div>
+  <div class="sig-modal-header">
+    <span class="sig-modal-title" id="sigModalTitle">เซ็นชื่อ</span>
+    <button class="sig-modal-btn cancel" style="padding:6px 14px;font-size:13px;" onclick="closeSigModal()">&#10005; ปิด</button>
+  </div>
+  <div class="sig-modal-body">
+    <div class="sig-modal-hint">วาดลายเซ็นของท่านในพื้นที่ด้านล่าง</div>
+    <div class="sig-modal-canvas-wrap" id="sigModalCanvasWrap">
+      <canvas id="sigModalCanvas"></canvas>
+    </div>
+    <div class="sig-modal-footer">
+      <button class="sig-modal-btn clear" onclick="clearModalCanvas()">&#128465; ล้างลายเซ็น</button>
+      <button class="sig-modal-btn confirm" onclick="confirmSig()">&#10004; ยืนยันลายเซ็น</button>
+    </div>
+  </div>
 </div>
-<script id="logoData" type="text/plain">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
+<script id="logoData" type="text/plain">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</document_content></document>
+
+<script>
+  // ── Logo ──────────────────────────────────────────────────
+  (function() {
+    var b64 = document.getElementById('logoData').textContent.trim();
+    document.getElementById('kimacLogo').src = 'data:image/jpeg;base64,' + b64;
+  })();
+
+  // ── Mobile scale ─────────────────────────────────────────
+  function scaleWrapper() {
+    var W = window.innerWidth - 20;
+    var pw = document.getElementById('pageWrapper');
+    var natural = 210 * 3.7795275591; // mm to px
+    if (W < natural) {
+      var sc = W / natural;
+      pw.style.transform = 'scale(' + sc + ')';
+      pw.style.marginBottom = '-' + (natural * (1 - sc)) + 'px';
+    } else {
+      pw.style.transform = '';
+      pw.style.marginBottom = '';
+    }
+  }
+  window.addEventListener('resize', scaleWrapper);
+  scaleWrapper();
+
+  // ── Export PDF ────────────────────────────────────────────
+  function exportPDF() {
+    // Remove transform before printing so browsers capture full A4
+    var pw = document.getElementById('pageWrapper');
+    var savedTransform = pw.style.transform;
+    var savedMargin = pw.style.marginBottom;
+    pw.style.transform = '';
+    pw.style.marginBottom = '';
+    window.print();
+    // Restore after print dialog closes
+    setTimeout(function() {
+      pw.style.transform = savedTransform;
+      pw.style.marginBottom = savedMargin;
+    }, 500);
+  }
+
+  // ── Parts table ───────────────────────────────────────────
+  var rowCount = 0;
+  function addRow() {
+    rowCount++;
+    var tb = document.getElementById('partsBody');
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + rowCount + '</td>'
+      + '<td><input type="text" placeholder="รายการอะไหล่"></td>'
+      + '<td><input type="text" placeholder="รหัส"></td>'
+      + '<td><input type="number" min="0" placeholder="0" oninput="calcTotals()"></td>'
+      + '<td><input type="text" placeholder="ชิ้น"></td>'
+      + '<td class="price-cell"><input type="number" min="0" step="0.01" placeholder="0.00" oninput="calcTotals()"></td>';
+    tb.appendChild(tr);
+  }
+  function calcTotals() {
+    var rows = document.querySelectorAll('#partsBody tr');
+    var sub = 0;
+    rows.forEach(function(r) {
+      var qty = parseFloat(r.cells[3].querySelector('input').value) || 0;
+      var price = parseFloat(r.cells[5].querySelector('input').value) || 0;
+      sub += qty * price;
+    });
+    var vat = sub * 0.07;
+    var total = sub + vat;
+    document.getElementById('s_sub').value = sub.toFixed(2);
+    document.getElementById('s_vat').value = vat.toFixed(2);
+    document.getElementById('s_total').value = total.toFixed(2);
+  }
+  // Add 3 rows by default
+  addRow(); addRow(); addRow();
+
+  // ── Service type toggle ───────────────────────────────────
+  function toggleOtherService(sel) {
+    var inp = document.getElementById('otherServiceInput');
+    inp.classList.toggle('show', sel.value === 'other');
+  }
+
+  // ── Warranty toggle ───────────────────────────────────────
+  function toggleWarranty(radio) {
+    var lbl = document.getElementById('warrantyLabel');
+    var inp = document.getElementById('warrantyNo');
+    var show = radio.value === 'in';
+    lbl.style.display = show ? 'inline' : 'none';
+    inp.classList.toggle('show', show);
+  }
+
+  // ── Province toggle ───────────────────────────────────────
+  function toggleFee(radio) {
+    var inp = document.getElementById('provinceInput');
+    inp.classList.toggle('show', radio.value === 'province');
+  }
+
+  // ── Signature modal ───────────────────────────────────────
+  var currentSigTarget = null;
+  var sigCanvas, sigCtx, sigDrawing = false, sigLastX, sigLastY;
+
+  function openSigModal(target) {
+    currentSigTarget = target;
+    document.getElementById('sigModalTitle').textContent =
+      target === 'tech' ? 'ลายเซ็นช่างผู้ให้บริการ' : 'ลายเซ็นลูกค้า / ผู้ตรวจรับงาน';
+    document.getElementById('sigModalOverlay').classList.add('open');
+    initCanvas();
+  }
+  function closeSigModal() {
+    document.getElementById('sigModalOverlay').classList.remove('open');
+    currentSigTarget = null;
+  }
+  function initCanvas() {
+    sigCanvas = document.getElementById('sigModalCanvas');
+    var wrap = document.getElementById('sigModalCanvasWrap');
+    sigCanvas.width = wrap.clientWidth;
+    sigCanvas.height = 200;
+    sigCtx = sigCanvas.getContext('2d');
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigCtx.strokeStyle = '#1a3a6e';
+    sigCtx.lineWidth = 2.5;
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+  }
+  function getPos(e) {
+    var r = sigCanvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * (sigCanvas.width / r.width),
+             y: (src.clientY - r.top)  * (sigCanvas.height / r.height) };
+  }
+  function sigStart(e) { e.preventDefault(); sigDrawing = true; var p = getPos(e); sigLastX = p.x; sigLastY = p.y; }
+  function sigMove(e)  { e.preventDefault(); if (!sigDrawing) return; var p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(sigLastX, sigLastY); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); sigLastX = p.x; sigLastY = p.y; }
+  function sigEnd(e)   { sigDrawing = false; }
+  sigCanvas = document.getElementById('sigModalCanvas');
+  sigCanvas.addEventListener('mousedown',  sigStart);
+  sigCanvas.addEventListener('mousemove',  sigMove);
+  sigCanvas.addEventListener('mouseup',    sigEnd);
+  sigCanvas.addEventListener('touchstart', sigStart, { passive: false });
+  sigCanvas.addEventListener('touchmove',  sigMove,  { passive: false });
+  sigCanvas.addEventListener('touchend',   sigEnd);
+
+  function clearModalCanvas() {
+    if (sigCtx) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+  }
+  function confirmSig() {
+    if (!currentSigTarget) return;
+    var dataUrl = sigCanvas.toDataURL('image/png');
+    var prefix = currentSigTarget;
+    var img = document.getElementById(prefix + 'SigImg');
+    var btn = document.getElementById(prefix + 'SigBtn');
+    var clr = document.getElementById(prefix + 'ClearBtn');
+    img.src = dataUrl;
+    img.style.display = 'block';
+    btn.style.display = 'none';
+    clr.classList.add('show');
+    closeSigModal();
+  }
+  function clearSigPreview(prefix) {
+    var img = document.getElementById(prefix + 'SigImg');
+    var btn = document.getElementById(prefix + 'SigBtn');
+    var clr = document.getElementById(prefix + 'ClearBtn');
+    img.src = '';
+    img.style.display = 'none';
+    btn.style.display = '';
+    clr.classList.remove('show');
+  }
+</script>
+</body>
+</html>
