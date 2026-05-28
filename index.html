@@ -739,9 +739,19 @@ async function exportPDF() {
     clone.style.overflow = 'visible';
     // Force layout/reflow before measuring.
     void clone.offsetHeight;
-    // Use the full scroll height plus a small buffer so the last line (footer)
-    // is never cut off due to sub-pixel rounding.
-    const contentH = Math.ceil(Math.max(clone.scrollHeight, clone.offsetHeight, A4_H_PX)) + 2;
+    // Measure the REAL bottom of the content. scrollHeight can under-report the
+    // footer (margins not counted), so we also check the footer's own bottom
+    // edge relative to the clone and take the larger value, plus a buffer.
+    let measuredH = Math.max(clone.scrollHeight, clone.offsetHeight);
+    const footerEl = clone.querySelector('.footer');
+    if (footerEl) {
+      const cloneTop = clone.getBoundingClientRect().top;
+      const footerBottom = footerEl.getBoundingClientRect().bottom;
+      // distance from clone top to footer bottom, plus the page's bottom padding
+      const padBottom = parseFloat(getComputedStyle(clone).paddingBottom) || 0;
+      measuredH = Math.max(measuredH, (footerBottom - cloneTop) + padBottom);
+    }
+    const contentH = Math.ceil(Math.max(measuredH, A4_H_PX)) + 8;
 
     // If we couldn't get the low-level libs, fall back to the high-level
     // html2pdf API (always present) so export still works.
