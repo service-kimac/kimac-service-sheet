@@ -753,26 +753,31 @@ async function exportPDF() {
     }
     const contentH = Math.ceil(Math.max(measuredH, A4_H_PX)) + 8;
 
-    // If we couldn't get the low-level libs, fall back to the high-level
-    // html2pdf API (always present) so export still works.
-    if (!jsPDFCtor || !h2c) {
-      await html2pdf().set({
-        margin: 0,
-        filename: 'SERVICE_SHEET_KIMAC.pdf',
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: {
-          scale: 2, useCORS: true, letterRendering: true,
-          width: A4_W_PX, height: contentH,
-          windowWidth: A4_W_PX, windowHeight: contentH,
-          x: 0, y: 0, scrollX: 0, scrollY: 0, backgroundColor: '#ffffff'
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak: { mode: ['avoid-all'] }
-      }).from(clone).save();
-      return;
+    // Pin the clone to the measured height so html2canvas captures the full
+    // region (including the footer) on every platform, including iOS Safari.
+    clone.style.height = contentH + 'px';
+    clone.style.minHeight = contentH + 'px';
+    void clone.offsetHeight;
+
+    // Helper: given a rendered canvas, place it on ONE A4 page, scaled to fit
+    // (so the footer / contact info can never spill onto a second page).
+    function canvasToSingleA4(canvas, jsPDFCtor) {
+      const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      let imgW = pageW;
+      let imgH = (canvas.height / canvas.width) * imgW;
+      if (imgH > pageH) {
+        imgH = pageH;
+        imgW = (canvas.width / canvas.height) * imgH;
+      }
+      const offsetX = (pageW - imgW) / 2;
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      pdf.addImage(imgData, 'JPEG', offsetX, 0, imgW, imgH);
+      pdf.save('SERVICE_SHEET_KIMAC.pdf');
     }
 
-    const canvas = await h2c(clone, {
+    const h2cOpts = {
       scale: 2,
       useCORS: true,
       letterRendering: true,
@@ -785,27 +790,56 @@ async function exportPDF() {
       scrollX: 0,
       scrollY: 0,
       backgroundColor: '#ffffff'
-    });
+    };
 
-    const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
+    let canvas = null;
 
-    // Fit the whole captured image onto a single A4 page.
-    // Width always matches the page; height is scaled proportionally and,
-    // if the content is taller than A4, shrunk to fit so it stays on ONE page.
-    let imgW = pageW;
-    let imgH = (canvas.height / canvas.width) * imgW;
-    if (imgH > pageH) {
-      imgH = pageH;
-      imgW = (canvas.width / canvas.height) * imgH;
+    // Path A: low-level html2canvas (preferred).
+    if (h2c) {
+      try { canvas = await h2c(clone, h2cOpts); } catch (e) { canvas = null; }
     }
-    const offsetX = (pageW - imgW) / 2;
-    const offsetY = 0;
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    pdf.addImage(imgData, 'JPEG', offsetX, offsetY, imgW, imgH);
-    pdf.save('SERVICE_SHEET_KIMAC.pdf');
+    // Path B: if html2canvas global wasn't usable, get the canvas THROUGH the
+    // html2pdf pipeline (which is always present). Then we still place it on a
+    // single A4 page ourselves so it never splits.
+    if (!canvas && window.html2pdf) {
+      try {
+        canvas = await html2pdf().set({
+          margin: 0,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: h2cOpts,
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true }
+        }).from(clone).toCanvas().get('canvas');
+      } catch (e) { canvas = null; }
+    }
+
+    if (!canvas) throw new Error('canvas render failed');
+
+    // Resolve a jsPDF constructor from any known location.
+    const jsPDFCtorFinal =
+      jsPDFCtor ||
+      (window.jspdf && window.jspdf.jsPDF) ||
+      window.jsPDF ||
+      (window.html2pdf && window.html2pdf.jsPDF);
+
+    if (jsPDFCtorFinal) {
+      canvasToSingleA4(canvas, jsPDFCtorFinal);
+    } else {
+      // Absolute last resort: let html2pdf build the PDF from the canvas image.
+      // Use avoid-all so it doesn't break elements across pages.
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const tmp = document.createElement('img');
+      tmp.src = imgData;
+      tmp.style.width = A4_W_PX + 'px';
+      await html2pdf().set({
+        margin: 0,
+        filename: 'SERVICE_SHEET_KIMAC.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 1, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+        pagebreak: { mode: ['avoid-all'] }
+      }).from(tmp).save();
+    }
   } catch (err) {
     console.error('PDF export error:', err);
     alert('เกิดข้อผิดพลาดในการสร้าง PDF กรุณาลองอีกครั้ง');
