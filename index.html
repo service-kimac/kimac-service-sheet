@@ -711,6 +711,24 @@ async function exportPDF() {
   }
 
   try {
+    // Resolve the bundled libraries defensively. The html2pdf bundle exposes
+    // html2canvas and jsPDF as globals, but the exact location varies by
+    // version / platform (this is what was failing on mobile). Wait briefly
+    // for them to register if needed.
+    async function resolveLibs() {
+      for (let i = 0; i < 40; i++) {
+        const h2c = window.html2canvas;
+        const jsPDFCtor =
+          (window.jspdf && window.jspdf.jsPDF) ||
+          window.jsPDF ||
+          (window.html2pdf && window.html2pdf.jsPDF);
+        if (h2c && jsPDFCtor) return { h2c, jsPDFCtor };
+        await new Promise(r => setTimeout(r, 50));
+      }
+      return { h2c: window.html2canvas, jsPDFCtor: null };
+    }
+    const { h2c, jsPDFCtor } = await resolveLibs();
+
     // Let the clone reflow at A4 width, then measure its REAL rendered height.
     // We capture the full content height (so nothing is cut off) and then scale
     // the canvas to fit exactly one A4 page (so it never spills to page 2).
@@ -725,7 +743,26 @@ async function exportPDF() {
     // is never cut off due to sub-pixel rounding.
     const contentH = Math.ceil(Math.max(clone.scrollHeight, clone.offsetHeight, A4_H_PX)) + 2;
 
-    const canvas = await html2canvas(clone, {
+    // If we couldn't get the low-level libs, fall back to the high-level
+    // html2pdf API (always present) so export still works.
+    if (!jsPDFCtor || !h2c) {
+      await html2pdf().set({
+        margin: 0,
+        filename: 'SERVICE_SHEET_KIMAC.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: {
+          scale: 2, useCORS: true, letterRendering: true,
+          width: A4_W_PX, height: contentH,
+          windowWidth: A4_W_PX, windowHeight: contentH,
+          x: 0, y: 0, scrollX: 0, scrollY: 0, backgroundColor: '#ffffff'
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+        pagebreak: { mode: ['avoid-all'] }
+      }).from(clone).save();
+      return;
+    }
+
+    const canvas = await h2c(clone, {
       scale: 2,
       useCORS: true,
       letterRendering: true,
@@ -740,8 +777,7 @@ async function exportPDF() {
       backgroundColor: '#ffffff'
     });
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
 
