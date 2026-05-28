@@ -711,34 +711,50 @@ async function exportPDF() {
   }
 
   try {
-    await html2pdf().set({
-      margin: 0,
-      filename: 'SERVICE_SHEET_KIMAC.pdf',
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        letterRendering: true,
-        // Force the rendering viewport to A4 pixel width, NOT the device viewport.
-        // This is what fixes the mobile-export-zoomed problem.
-        width: A4_W_PX,
-        height: A4_H_PX,
-        windowWidth: A4_W_PX,
-        windowHeight: A4_H_PX,
-        x: 0,
-        y: 0,
-        scrollX: 0,
-        scrollY: 0,
-        backgroundColor: '#ffffff'
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait',
-        compress: true
-      },
-      pagebreak: { mode: ['avoid-all'] }
-    }).from(clone).save();
+    // Let the clone reflow at A4 width, then measure its REAL rendered height.
+    // We capture the full content height (so nothing is cut off) and then scale
+    // the canvas to fit exactly one A4 page (so it never spills to page 2).
+    clone.style.minHeight = '0';
+    clone.style.height = 'auto';
+    // Force layout/reflow before measuring.
+    void clone.offsetHeight;
+    const contentH = Math.max(clone.scrollHeight, clone.offsetHeight, A4_H_PX);
+
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      letterRendering: true,
+      width: A4_W_PX,
+      height: contentH,
+      windowWidth: A4_W_PX,
+      windowHeight: contentH,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0,
+      backgroundColor: '#ffffff'
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+
+    // Fit the whole captured image onto a single A4 page.
+    // Width always matches the page; height is scaled proportionally and,
+    // if the content is taller than A4, shrunk to fit so it stays on ONE page.
+    let imgW = pageW;
+    let imgH = (canvas.height / canvas.width) * imgW;
+    if (imgH > pageH) {
+      imgH = pageH;
+      imgW = (canvas.width / canvas.height) * imgH;
+    }
+    const offsetX = (pageW - imgW) / 2;
+    const offsetY = 0;
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(imgData, 'JPEG', offsetX, offsetY, imgW, imgH);
+    pdf.save('SERVICE_SHEET_KIMAC.pdf');
   } catch (err) {
     console.error('PDF export error:', err);
     alert('เกิดข้อผิดพลาดในการสร้าง PDF กรุณาลองอีกครั้ง');
