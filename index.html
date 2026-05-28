@@ -636,9 +636,10 @@ async function exportPDF() {
   // Off-screen container at exact A4 width so layout reflows for A4
   const exportHost = document.createElement('div');
   exportHost.id = 'pdfExportHost';
-  exportHost.style.position = 'fixed';
-  exportHost.style.left = '-10000px';
+  exportHost.style.position = 'absolute';
+  exportHost.style.left = '0';
   exportHost.style.top = '0';
+  exportHost.style.pointerEvents = 'none';
   exportHost.style.width = A4_W_PX + 'px';
   exportHost.style.background = '#ffffff';
   exportHost.style.zIndex = '-1';
@@ -711,135 +712,53 @@ async function exportPDF() {
   }
 
   try {
-    // Resolve the bundled libraries defensively. The html2pdf bundle exposes
-    // html2canvas and jsPDF as globals, but the exact location varies by
-    // version / platform (this is what was failing on mobile). Wait briefly
-    // for them to register if needed.
-    async function resolveLibs() {
+    // Resolve jsPDF from any location the html2pdf bundle may expose it.
+    async function resolveJsPDF() {
       for (let i = 0; i < 40; i++) {
-        const h2c = window.html2canvas;
-        const jsPDFCtor =
+        const ctor =
           (window.jspdf && window.jspdf.jsPDF) ||
           window.jsPDF ||
           (window.html2pdf && window.html2pdf.jsPDF);
-        if (h2c && jsPDFCtor) return { h2c, jsPDFCtor };
+        if (window.html2canvas && ctor) return ctor;
         await new Promise(r => setTimeout(r, 50));
       }
-      return { h2c: window.html2canvas, jsPDFCtor: null };
+      return (window.jspdf && window.jspdf.jsPDF) || window.jsPDF || null;
     }
-    const { h2c, jsPDFCtor } = await resolveLibs();
+    const jsPDFCtor = await resolveJsPDF();
 
-    // Let the clone reflow at A4 width, then measure its REAL rendered height.
-    // We capture the full content height (so nothing is cut off) and then scale
-    // the canvas to fit exactly one A4 page (so it never spills to page 2).
-    // IMPORTANT: the .page has overflow:hidden which can clip the bottom
-    // (footer / contact info). Disable it on the clone so everything is captured.
+    // The .page has overflow:hidden which can clip the footer. Allow it to grow
+    // to its natural height so the whole sheet (incl. contact footer) is drawn.
     clone.style.minHeight = '0';
     clone.style.height = 'auto';
     clone.style.overflow = 'visible';
-    // Force layout/reflow before measuring.
-    void clone.offsetHeight;
-    // Measure the REAL bottom of the content. scrollHeight can under-report the
-    // footer (margins not counted), so we also check the footer's own bottom
-    // edge relative to the clone and take the larger value, plus a buffer.
-    let measuredH = Math.max(clone.scrollHeight, clone.offsetHeight);
-    const footerEl = clone.querySelector('.footer');
-    if (footerEl) {
-      const cloneTop = clone.getBoundingClientRect().top;
-      const footerBottom = footerEl.getBoundingClientRect().bottom;
-      // distance from clone top to footer bottom, plus the page's bottom padding
-      const padBottom = parseFloat(getComputedStyle(clone).paddingBottom) || 0;
-      measuredH = Math.max(measuredH, (footerBottom - cloneTop) + padBottom);
-    }
-    const contentH = Math.ceil(Math.max(measuredH, A4_H_PX)) + 8;
-
-    // Pin the clone to the measured height so html2canvas captures the full
-    // region (including the footer) on every platform, including iOS Safari.
-    clone.style.height = contentH + 'px';
-    clone.style.minHeight = contentH + 'px';
     void clone.offsetHeight;
 
-    // Helper: given a rendered canvas, place it on ONE A4 page, scaled to fit
-    // (so the footer / contact info can never spill onto a second page).
-    function canvasToSingleA4(canvas, jsPDFCtor) {
-      const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      let imgW = pageW;
-      let imgH = (canvas.height / canvas.width) * imgW;
-      if (imgH > pageH) {
-        imgH = pageH;
-        imgW = (canvas.width / canvas.height) * imgH;
-      }
-      const offsetX = (pageW - imgW) / 2;
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      pdf.addImage(imgData, 'JPEG', offsetX, 0, imgW, imgH);
-      pdf.save('SERVICE_SHEET_KIMAC.pdf');
-    }
-
-    const h2cOpts = {
+    // Render the clone to a canvas. Keep options minimal — forcing width/height/
+    // scroll offsets was producing blank captures on mobile Safari. windowWidth
+    // is enough to make layout reflow at A4 width.
+    const canvas = await html2canvas(clone, {
       scale: 2,
       useCORS: true,
-      letterRendering: true,
-      width: A4_W_PX,
-      height: contentH,
+      backgroundColor: '#ffffff',
       windowWidth: A4_W_PX,
-      windowHeight: contentH,
-      x: 0,
-      y: 0,
       scrollX: 0,
-      scrollY: 0,
-      backgroundColor: '#ffffff'
-    };
+      scrollY: 0
+    });
 
-    let canvas = null;
-
-    // Path A: low-level html2canvas (preferred).
-    if (h2c) {
-      try { canvas = await h2c(clone, h2cOpts); } catch (e) { canvas = null; }
+    // Place the whole capture on ONE A4 page, scaled to fit (never splits).
+    const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    let imgW = pageW;
+    let imgH = (canvas.height / canvas.width) * imgW;
+    if (imgH > pageH) {
+      imgH = pageH;
+      imgW = (canvas.width / canvas.height) * imgH;
     }
-
-    // Path B: if html2canvas global wasn't usable, get the canvas THROUGH the
-    // html2pdf pipeline (which is always present). Then we still place it on a
-    // single A4 page ourselves so it never splits.
-    if (!canvas && window.html2pdf) {
-      try {
-        canvas = await html2pdf().set({
-          margin: 0,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: h2cOpts,
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true }
-        }).from(clone).toCanvas().get('canvas');
-      } catch (e) { canvas = null; }
-    }
-
-    if (!canvas) throw new Error('canvas render failed');
-
-    // Resolve a jsPDF constructor from any known location.
-    const jsPDFCtorFinal =
-      jsPDFCtor ||
-      (window.jspdf && window.jspdf.jsPDF) ||
-      window.jsPDF ||
-      (window.html2pdf && window.html2pdf.jsPDF);
-
-    if (jsPDFCtorFinal) {
-      canvasToSingleA4(canvas, jsPDFCtorFinal);
-    } else {
-      // Absolute last resort: let html2pdf build the PDF from the canvas image.
-      // Use avoid-all so it doesn't break elements across pages.
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const tmp = document.createElement('img');
-      tmp.src = imgData;
-      tmp.style.width = A4_W_PX + 'px';
-      await html2pdf().set({
-        margin: 0,
-        filename: 'SERVICE_SHEET_KIMAC.pdf',
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 1, useCORS: true, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak: { mode: ['avoid-all'] }
-      }).from(tmp).save();
-    }
+    const offsetX = (pageW - imgW) / 2;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(imgData, 'JPEG', offsetX, 0, imgW, imgH);
+    pdf.save('SERVICE_SHEET_KIMAC.pdf');
   } catch (err) {
     console.error('PDF export error:', err);
     alert('เกิดข้อผิดพลาดในการสร้าง PDF กรุณาลองอีกครั้ง');
