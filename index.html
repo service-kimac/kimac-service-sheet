@@ -714,11 +714,16 @@ async function exportPDF() {
     // Let the clone reflow at A4 width, then measure its REAL rendered height.
     // We capture the full content height (so nothing is cut off) and then scale
     // the canvas to fit exactly one A4 page (so it never spills to page 2).
+    // IMPORTANT: the .page has overflow:hidden which can clip the bottom
+    // (footer / contact info). Disable it on the clone so everything is captured.
     clone.style.minHeight = '0';
     clone.style.height = 'auto';
+    clone.style.overflow = 'visible';
     // Force layout/reflow before measuring.
     void clone.offsetHeight;
-    const contentH = Math.max(clone.scrollHeight, clone.offsetHeight, A4_H_PX);
+    // Use the full scroll height plus a small buffer so the last line (footer)
+    // is never cut off due to sub-pixel rounding.
+    const contentH = Math.ceil(Math.max(clone.scrollHeight, clone.offsetHeight, A4_H_PX)) + 2;
 
     const canvas = await html2canvas(clone, {
       scale: 2,
