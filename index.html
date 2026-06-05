@@ -306,7 +306,7 @@
   <div class="form-row">
     <div class="field full-width" style="flex-direction:column;align-items:flex-start;gap:3px;">
       <label>รายละเอียด :</label>
-      <textarea rows="2" style="width:100%;"></textarea>
+      <textarea id="detailTextarea" rows="5" style="width:100%;"></textarea>
     </div>
   </div>
   <div class="section-title">ส่วนที่ 3 รายการอะไหล่ที่เปลี่ยน</div>
@@ -632,6 +632,24 @@ async function exportPDF() {
     }
   });
 
+  // Swap textarea → static div so PDF captures all 5 lines correctly
+  const textarea = document.getElementById('detailTextarea');
+  const textareaValue = textarea.value;
+  const textareaParent = textarea.parentNode;
+  const lineHeight = 1.6, fontSize = 13, paddingPx = 4;
+  const fiveLinesPx = (fontSize * lineHeight * 5) + (paddingPx * 2);
+  const detailDiv = document.createElement('div');
+  detailDiv.style.cssText = [
+    'width:100%','border:1px solid #bfa000','border-radius:4px',
+    'background:rgba(255,255,255,0.7)','padding:' + paddingPx + 'px',
+    'font-family:Sarabun,sans-serif','font-size:' + fontSize + 'px',
+    'line-height:' + lineHeight,'color:#222','white-space:pre-wrap',
+    'word-break:break-word','min-height:' + fiveLinesPx + 'px',
+    'height:' + fiveLinesPx + 'px','overflow:hidden','box-sizing:border-box'
+  ].join(';');
+  detailDiv.textContent = textareaValue;
+  textareaParent.replaceChild(detailDiv, textarea);
+
   // Clone the page AFTER transform reset
   const original = document.getElementById('page');
   const clone = original.cloneNode(true);
@@ -688,6 +706,7 @@ async function exportPDF() {
   clone.querySelectorAll('.btn-add-row').forEach(b => b.style.display = 'none');
 
   function cleanup() {
+    if (detailDiv.parentNode) detailDiv.parentNode.replaceChild(textarea, detailDiv);
     if (exportHost.parentNode) exportHost.parentNode.removeChild(exportHost);
     document.querySelectorAll('.sig-trigger-btn').forEach(b => {
       const t = b.id.replace('SigBtn','');
