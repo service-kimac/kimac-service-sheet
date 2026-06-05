@@ -261,12 +261,12 @@
   </div>
   <div class="section-title">ส่วนที่ 1 ข้อมูลลูกค้า</div>
   <div class="form-row">
-    <div class="field"><label>วันที่บริการ :</label><input type="date"></div>
+    <div class="field"><label>วันที่บริการ :</label><input id="serviceDate" type="date"></div>
     <div class="field"><label>เวลาเริ่ม :</label><input type="time"></div>
     <div class="field"><label>เวลาจบงาน :</label><input type="time"></div>
   </div>
   <div class="form-row">
-    <div class="field full-width"><label>บริษัท / ห้างฯ / ร้าน ลูกค้า :</label><input type="text" style="min-width:300px;"></div>
+    <div class="field full-width"><label>บริษัท / ห้างฯ / ร้าน ลูกค้า :</label><input id="companyName" type="text" style="min-width:300px;"></div>
   </div>
   <div class="form-row">
     <div class="field"><label>ติดต่อคุณ :</label><input type="text"></div>
@@ -282,7 +282,7 @@
       <label>สถานที่บริการ :</label>
       <select style="border:1px solid #bfa000;border-radius:4px;background:white;font-family:'Sarabun',sans-serif;font-size:13px;padding:2px 6px;outline:none;cursor:pointer;color:#222;">
         <option value="">-- เลือก --</option>
-        <option>ที่ลูกค้า</option>
+        <option>บริษัทลูกค้า</option>
         <option>บจก.คีแมค</option>
         <option>อื่นๆ</option>
       </select>
@@ -734,7 +734,12 @@ async function exportPDF() {
   try {
     await html2pdf().set({
       margin: 0,
-      filename: 'SERVICE_SHEET_KIMAC.pdf',
+      filename: (function(){
+        const co = (document.getElementById('companyName').value || 'KIMAC').trim().replace(/[\/\\:*?"<>|]/g,'');
+        const dt = document.getElementById('serviceDate').value || '';
+        const dateStr = dt ? dt.replace(/-/g,'') : '';
+        return 'SERVICE_SHEET' + (co ? '_' + co : '') + (dateStr ? '_' + dateStr : '') + '.pdf';
+      })(),
       image: { type: 'jpeg', quality: 0.95 },
       html2canvas: {
         scale: 2,
